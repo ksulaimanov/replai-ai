@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-dotenv
+google-cloud-aiplatform
+google-genai
+groq
+google-auth
+langchain
+langchain-openai
+chromadb
+pypdf2
+python-docx
+httpx
+aiogram==3.15.0
