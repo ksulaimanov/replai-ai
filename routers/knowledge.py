@@ -1,8 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from services.rag_service import add_to_knowledge_base, delete_knowledge_base
+from routers.dependencies import verify_internal_key
 
-router = APIRouter(prefix="/knowledge", tags=["knowledge"])
+router = APIRouter(prefix="/knowledge", tags=["knowledge"], dependencies=[Depends(verify_internal_key)])
 
 
 class UploadRequest(BaseModel):
