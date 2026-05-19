@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from services.llm_service import get_ai_response
 from routers.dependencies import verify_internal_key
@@ -8,10 +8,13 @@ router = APIRouter(prefix="/chat", tags=["chat"], dependencies=[Depends(verify_i
 
 
 class ChatRequest(BaseModel):
-    bot_id: str
-    chat_id: str
+    bot_id: int = Field(..., alias="botId")
+    chat_id: str = Field(..., alias="chatId")
     message: str
-    system_prompt: Optional[str] = None
+    system_prompt: Optional[str] = Field(None, alias="systemPrompt")
+
+    class Config:
+        allow_population_by_field_name = True
 
 
 @router.post("/")
