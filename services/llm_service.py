@@ -55,10 +55,10 @@ _SYSTEM_PROMPT = """Ты — живой менеджер по продажам. 
 _histories: dict[str, list] = {}
 
 
-def get_ai_response(bot_id: str, chat_id: str, message: str) -> str:
+def get_ai_response(bot_id: str, chat_id: str, message: str, system_prompt: str | None = None) -> str:
     context = search_knowledge_base(bot_id, message)
 
-    system = _SYSTEM_PROMPT
+    system = system_prompt.strip() if system_prompt and system_prompt.strip() else _SYSTEM_PROMPT
     if context:
         system += f"\n\nИнформация о продуктах/услугах компании (используй это):\n{context}"
 
