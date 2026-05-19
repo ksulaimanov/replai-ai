@@ -2,7 +2,10 @@ import os
 import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
+from dotenv import load_dotenv
 from services.llm_service import get_ai_response
+
+load_dotenv()
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
@@ -32,5 +35,5 @@ async def handle_message(message: types.Message):
             await asyncio.sleep(1)
 
 
-async def start_polling():
-    await dp.start_polling(bot)
+if __name__ == "__main__":
+    asyncio.run(dp.start_polling(bot))
