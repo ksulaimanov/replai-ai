@@ -86,7 +86,14 @@ def get_ai_response(bot_id: int, chat_id: str, message: str, system_prompt: str 
 
     system = system_prompt.strip() if system_prompt and system_prompt.strip() else _SYSTEM_PROMPT
     if context:
-        system += f"\n\nИнформация о продуктах/услугах компании (используй это):\n{context}"
+        system = (
+            "[Контекст из базы знаний компании]\n"
+            f"{context}\n\n"
+            "[Инструкция по контексту]: Отвечай клиенту, строго опираясь на информацию выше. "
+            "Если в контексте нет прямого ответа — скажи, что уточнишь у коллег и свяжешься позже. "
+            "Не придумывай данные, которых нет в контексте.\n\n"
+            + system
+        )
 
     model = GenerativeModel(_MODEL_NAME, system_instruction=[system])
 
