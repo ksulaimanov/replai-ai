@@ -1,6 +1,14 @@
+import os
 import chromadb
+from dotenv import load_dotenv
 
-_client = chromadb.PersistentClient(path="./chroma_db")
+load_dotenv()
+
+_client = chromadb.CloudClient(
+    api_key=os.getenv("CHROMA_API_KEY"),
+    tenant=os.getenv("CHROMA_TENANT"),
+    database=os.getenv("CHROMA_DATABASE"),
+)
 
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50

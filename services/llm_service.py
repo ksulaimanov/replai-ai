@@ -1,8 +1,10 @@
 import os
+import json
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 import vertexai
-from vertexai.generative_models import GenerativeModel
+from vertexai.generative_models import GenerativeModel, Content, Part
+from upstash_redis import Redis
 from services.rag_service import search_knowledge_base
 
 load_dotenv()
@@ -18,6 +20,14 @@ _credentials = Credentials.from_service_account_file(
 )
 
 vertexai.init(project=_PROJECT, location=_LOCATION, credentials=_credentials)
+
+_redis = Redis(
+    url=os.getenv("UPSTASH_REDIS_REST_URL"),
+    token=os.getenv("UPSTASH_REDIS_REST_TOKEN"),
+)
+
+_HISTORY_TTL = 172800  # 48 часов
+_MAX_HISTORY = 40
 
 _SYSTEM_PROMPT = """Ты — живой менеджер по продажам. Твоё имя — Алина.
 
@@ -51,12 +61,28 @@ _SYSTEM_PROMPT = """Ты — живой менеджер по продажам. 
 Клиент: Хочу купить, как оформить?
 Ты: Супер, оформим прямо сейчас! ||| Скажите ваше имя и номер телефона — свяжусь в течение пары минут 😊"""
 
-# chat_id -> list[Content]
-_histories: dict[str, list] = {}
+
+def _load_history(chat_id: str) -> list[Content]:
+    raw = _redis.get(f"history:{chat_id}")
+    if not raw:
+        return []
+    data = json.loads(raw) if isinstance(raw, str) else raw
+    return [
+        Content(role=d["role"], parts=[Part.from_text(p["text"]) for p in d["parts"]])
+        for d in data
+    ]
 
 
-def get_ai_response(bot_id: str, chat_id: str, message: str, system_prompt: str | None = None) -> str:
-    context = search_knowledge_base(bot_id, message)
+def _save_history(chat_id: str, history: list[Content]) -> None:
+    data = [
+        {"role": c.role, "parts": [{"text": p.text} for p in c.parts]}
+        for c in history[-_MAX_HISTORY:]
+    ]
+    _redis.set(f"history:{chat_id}", json.dumps(data, ensure_ascii=False), ex=_HISTORY_TTL)
+
+
+def get_ai_response(bot_id: int, chat_id: str, message: str, system_prompt: str | None = None) -> str:
+    context = search_knowledge_base(str(bot_id), message)
 
     system = system_prompt.strip() if system_prompt and system_prompt.strip() else _SYSTEM_PROMPT
     if context:
@@ -64,16 +90,11 @@ def get_ai_response(bot_id: str, chat_id: str, message: str, system_prompt: str 
 
     model = GenerativeModel(_MODEL_NAME, system_instruction=[system])
 
-    if chat_id not in _histories:
-        _histories[chat_id] = []
-
-    chat = model.start_chat(history=_histories[chat_id])
+    history = _load_history(chat_id)
+    chat = model.start_chat(history=history)
     response = chat.send_message(message)
     reply = response.text
 
-    _histories[chat_id] = list(chat.history)
-
-    if len(_histories[chat_id]) > 40:
-        _histories[chat_id] = _histories[chat_id][-40:]
+    _save_history(chat_id, list(chat.history))
 
     return reply

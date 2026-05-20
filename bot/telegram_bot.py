@@ -3,6 +3,7 @@
 
 import os
 import asyncio
+from functools import partial
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
 from dotenv import load_dotenv
@@ -28,7 +29,8 @@ async def handle_message(message: types.Message):
     chat_id = str(message.chat.id)
     text = message.text or ""
 
-    reply = get_ai_response(BOT_ID, chat_id, text)
+    loop = asyncio.get_event_loop()
+    reply = await loop.run_in_executor(None, partial(get_ai_response, BOT_ID, chat_id, text))
 
     parts = [p.strip() for p in reply.split("|||") if p.strip()]
 
