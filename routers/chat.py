@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -14,10 +15,12 @@ class ChatRequest(BaseModel):
     system_prompt: Optional[str] = Field(None, alias="systemPrompt")
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True
 
 
 @router.post("/")
 async def chat(req: ChatRequest):
-    reply = get_ai_response(req.bot_id, req.chat_id, req.message, req.system_prompt)
+    reply = await asyncio.to_thread(
+        get_ai_response, req.bot_id, req.chat_id, req.message, req.system_prompt
+    )
     return {"reply": reply}

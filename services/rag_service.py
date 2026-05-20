@@ -1,4 +1,5 @@
 import os
+import uuid
 import chromadb
 from dotenv import load_dotenv
 
@@ -10,16 +11,16 @@ _client = chromadb.CloudClient(
     database=os.getenv("CHROMA_DATABASE"),
 )
 
-CHUNK_SIZE = 500
-CHUNK_OVERLAP = 50
+CHUNK_SIZE = 800
+CHUNK_OVERLAP = 150
 
 
 def _split(text: str) -> list[str]:
     chunks, start = [], 0
     while start < len(text):
-        chunks.append(text[start : start + CHUNK_SIZE])
+        chunks.append(text[start: start + CHUNK_SIZE])
         start += CHUNK_SIZE - CHUNK_OVERLAP
-    return chunks
+    return [c for c in chunks if c.strip()]
 
 
 def _collection(bot_id: str):
@@ -28,11 +29,12 @@ def _collection(bot_id: str):
 
 def add_to_knowledge_base(bot_id: str, text: str) -> None:
     chunks = _split(text)
+    if not chunks:
+        return
     col = _collection(bot_id)
-    existing = col.count()
     col.add(
         documents=chunks,
-        ids=[f"chunk_{existing + i}" for i in range(len(chunks))],
+        ids=[str(uuid.uuid4()) for _ in chunks],
     )
 
 
