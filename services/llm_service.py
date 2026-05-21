@@ -109,23 +109,34 @@ _SYSTEM_PROMPT = """
 Ты: Супер, оформим прямо сейчас! ||| Скажите ваше имя и номер телефона — свяжусь в течение пары минут 😊"""
 
 
+import logging as _logging
+_log = _logging.getLogger(__name__)
+
+
 def _load_history(chat_id: str) -> list[Content]:
-    raw = _redis.get(f"history:{chat_id}")
-    if not raw:
+    try:
+        raw = _redis.get(f"history:{chat_id}")
+        if not raw:
+            return []
+        data = json.loads(raw) if isinstance(raw, str) else raw
+        return [
+            Content(role=d["role"], parts=[Part.from_text(p["text"]) for p in d["parts"]])
+            for d in data
+        ]
+    except Exception as e:
+        _log.error("Redis load history failed for %s: %s", chat_id, e)
         return []
-    data = json.loads(raw) if isinstance(raw, str) else raw
-    return [
-        Content(role=d["role"], parts=[Part.from_text(p["text"]) for p in d["parts"]])
-        for d in data
-    ]
 
 
 def _save_history(chat_id: str, history: list[Content]) -> None:
-    data = [
-        {"role": c.role, "parts": [{"text": p.text} for p in c.parts]}
-        for c in history[-_MAX_HISTORY:]
-    ]
-    _redis.set(f"history:{chat_id}", json.dumps(data, ensure_ascii=False), ex=_HISTORY_TTL)
+    try:
+        data = [
+            {"role": c.role, "parts": [{"text": p.text} for p in c.parts]}
+            for c in history[-_MAX_HISTORY:]
+        ]
+        _redis.set(f"history:{chat_id}", json.dumps(data, ensure_ascii=False), ex=_HISTORY_TTL)
+    except Exception as e:
+        _log.error("Redis save history failed for %s: %s", chat_id, e)
 
 
 def get_ai_response(bot_id: int, chat_id: str, message: str, system_prompt: str | None = None) -> str:
