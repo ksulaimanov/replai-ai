@@ -23,8 +23,13 @@ def _split(text: str) -> list[str]:
     return [c for c in chunks if c.strip()]
 
 
+def _col_name(bot_id: str) -> str:
+    # ChromaDB requires collection names >= 3 chars; prefix guarantees that.
+    return f"bot-{bot_id}"
+
+
 def _collection(bot_id: str):
-    return _client.get_or_create_collection(bot_id)
+    return _client.get_or_create_collection(_col_name(bot_id))
 
 
 def add_to_knowledge_base(bot_id: str, text: str) -> None:
@@ -40,7 +45,7 @@ def add_to_knowledge_base(bot_id: str, text: str) -> None:
 
 def search_knowledge_base(bot_id: str, query: str) -> str:
     try:
-        col = _client.get_collection(bot_id)
+        col = _client.get_collection(_col_name(bot_id))
     except Exception:
         return ""
     if col.count() == 0:
@@ -52,6 +57,6 @@ def search_knowledge_base(bot_id: str, query: str) -> str:
 
 def delete_knowledge_base(bot_id: str) -> None:
     try:
-        _client.delete_collection(bot_id)
+        _client.delete_collection(_col_name(bot_id))
     except Exception:
         pass
