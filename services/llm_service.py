@@ -140,7 +140,13 @@ def _save_history(chat_id: str, history: list[Content]) -> None:
 
 
 def get_ai_response(bot_id: int, chat_id: str, message: str, system_prompt: str | None = None) -> str:
+    _log.info("bot=%s chat=%s | incoming: %s", bot_id, chat_id, message[:300])
+
     context = search_knowledge_base(str(bot_id), message)
+    if context:
+        _log.info("bot=%s chat=%s | rag context retrieved (%d chars)", bot_id, chat_id, len(context))
+    else:
+        _log.info("bot=%s chat=%s | no rag context found", bot_id, chat_id)
 
     system = system_prompt.strip() if system_prompt and system_prompt.strip() else _SYSTEM_PROMPT
     if context:
@@ -161,6 +167,8 @@ def get_ai_response(bot_id: int, chat_id: str, message: str, system_prompt: str 
     chat = model.start_chat(history=history)
     response = chat.send_message(message)
     reply = response.text
+
+    _log.info("bot=%s chat=%s | model reply: %s", bot_id, chat_id, reply[:300])
 
     _save_history(chat_id, list(chat.history))
 
